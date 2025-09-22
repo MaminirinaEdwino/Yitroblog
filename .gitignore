@@ -1,0 +1,5 @@
+__pycache__
+article/__pycache__
+my_venv
+uploads
+.env
