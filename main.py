@@ -31,7 +31,7 @@ async def create_user(user: UserCreate, db: SessionLocal = Depends(get_db)): # t
         raise HTTPException(status_code=400, detail="Username already registered")
     return await create_user_db(db, user)
 
-@app.post("/token", response_model=Token)
+@app.post("/login", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: SessionLocal = Depends(get_db)): # type: ignore
     user = await get_user_by_username(db, username=form_data.username)
     if not user:
@@ -46,7 +46,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def read_users_me(current_user: UserDB = Depends(get_current_active_user)):
     return current_user
 
-@app.get("/protected/", dependencies=[Depends(get_current_active_user)])
+@app.get("/protected/")
 async def protected_route():
     return {"message": "This route is protected!"}
 
