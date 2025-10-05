@@ -4,13 +4,39 @@ from article.model import article, article_create, article_update
 from db import get_db
 from requests import Session
 import shutil
+from user import UserDB
+from sqlalchemy.orm import joinedload
+from sqlalchemy.future import select
 article_router = APIRouter(prefix="/article", tags=['article'])
 
 
 @article_router.get("/")
 async def get_all_article(db: Session = Depends(get_db)):
-	db_article = db.query(article).all()	
-	return db_article
+	# db_article = db.query(article).all()	
+	query = select(article)
+	query = query.options(joinedload(article.author))
+	# query = query.join(UserDB)
+	db_article = db.execute(query)
+	res = []
+	for art in db_article.scalars().all():
+		res.append(
+						{
+          		"id": art.id,
+				"image": art.image,
+				"title":  art.title,
+				"datePublication": art.datePublication,
+				"category": art.category,
+				"excerpt": art.excerpt,
+				"author_id": art.author_id,
+				"author": {
+				"id": art.author.id,
+				"username":art.author.username,
+				"full_name": art.author.full_name,
+				"email":art.author.email
+				}
+			}
+		)
+	return res
 
 @article_router.get("/{id}")
 async def get_article_by_id(id: int, db: Session = Depends(get_db)):
@@ -36,7 +62,7 @@ async def postarticle(
     category: str = Form(...),
     title: str = Form(...),
     excerpt: str = Form(...),
-    author: str = Form(...),
+    author_id: int = Form(...),
     date: datetime = Form(...),
     db: Session = Depends(get_db)):
     filepath = os.path.join(UPLOAD_DIR, image.filename)
@@ -46,7 +72,7 @@ async def postarticle(
 		title= title,
 		excerpt=excerpt,
 		datePublication= str(date),
-		author=author
+		author_id=author_id
 	)
     db_article = article(**art.model_dump())
     db.add(db_article)
@@ -62,7 +88,7 @@ async def postarticle(
 		"category": category,
 		"title": title,
 		"excerpt": excerpt,
-		"author": author,
+		"author_id": author_id,
 		"date": date
 	}
      

@@ -1,8 +1,9 @@
 
 from db import Base
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Column, Integer, String, Boolean
-from typing import Optional
+from typing import List, Optional
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 class UserDB(Base):
     __tablename__ = "users"
@@ -14,26 +15,25 @@ class UserDB(Base):
     role = Column(String, default="user") 
     is_active = Column(Boolean, default=True)
     hashed_password = Column(String)
+    articles = relationship("article",back_populates="author")
 
 
 # --- Data Models (Pydantic) ---
 class User(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     username: str
     email: str
     full_name: Optional[str] = None
     is_active: bool = True
     role: str = "user"  # Default role is 'user'
-    class Config:
-        from_attributes = True
 
 class UserCreate(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     username: str
     password: str
     email: str
     full_name: Optional[str] = None
     role: str = "user"  # Default role is 'user'
-    class Config:
-        from_attributes = True
 
 class Token(BaseModel):
     access_token: str
