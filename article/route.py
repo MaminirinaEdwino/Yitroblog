@@ -56,7 +56,7 @@ async def get_article_by_id(id: int, db: Session = Depends(get_db)):
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok = True)
 
-@article_router.post('/', dependencies=[Depends(get_current_active_user)])
+@article_router.post('/', dependencies=[Depends(get_current_active_admin)])
 async def postarticle(
     image: UploadFile = File(...),  
     category: str = Form(...),
@@ -92,7 +92,7 @@ async def postarticle(
 		"date": date
 	}
      
-@article_router.put("/{id}", dependencies=[Depends(get_current_active_user)])
+@article_router.put("/{id}", dependencies=[Depends(get_current_active_admin)])
 async def update_article(id: int, article_put: article_update, db: Session = Depends(get_db)):
 	db_article = db.query(article).filter(article.id == id).first()
 	if not db_article:
@@ -104,7 +104,7 @@ async def update_article(id: int, article_put: article_update, db: Session = Dep
 	db.refresh(db_article)
 	return db_article
 
-@article_router.delete("/{id}", dependencies=[Depends(get_current_active_user)])
+@article_router.delete("/{id}", dependencies=[Depends(get_current_active_admin)])
 async def delete_article(id: int, db: Session = Depends(get_db)):
 	db_article = db.query(article).filter(article.id == id).first()
 	if not article:
