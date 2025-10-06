@@ -1,12 +1,14 @@
 from fastapi import APIRouter,Depends, HTTPException, UploadFile, File, Form 
 from security import *
-from article.model import article, article_create, article_update 
+from article.model import article, article_create, article_update, imageAnnexeCreate, imageAnnexe 
 from db import get_db
 from requests import Session
 import shutil
 from user import UserDB
 from sqlalchemy.orm import joinedload
 from sqlalchemy.future import select
+from typing import List
+
 article_router = APIRouter(prefix="/article", tags=['article'])
 
 
@@ -15,11 +17,13 @@ async def get_all_article(db: Session = Depends(get_db)):
 	# db_article = db.query(article).all()	
 	query = select(article)
 	query = query.options(joinedload(article.author))
+	
 	# query = query.join(UserDB)
 	db_article = db.execute(query)
 	res = []
 	for art in db_article.scalars().all():
-		res.append(
+	    print(art)
+	    res.append(
 						{
           		"id": art.id,
 				"image": art.image,
@@ -28,6 +32,7 @@ async def get_all_article(db: Session = Depends(get_db)):
 				"category": art.category,
 				"excerpt": art.excerpt,
 				"author_id": art.author_id,
+				"star":art.star,
 				"author": {
 				"id": art.author.id,
 				"username":art.author.username,
@@ -36,6 +41,7 @@ async def get_all_article(db: Session = Depends(get_db)):
 				}
 			}
 		)
+    
 	return res
 
 @article_router.get("/{id}")
@@ -54,8 +60,9 @@ async def get_article_by_id(id: int, db: Session = Depends(get_db)):
 				"image": art.image,
 				"title":  art.title,
 				"datePublication": art.datePublication,
-				"category": art.category,
+				"category": list(art.category),
 				"excerpt": art.excerpt,
+				"star":art.star,
 				"author": {
 				"id": art.author.id,
 				"username":art.author.username,
@@ -75,6 +82,47 @@ async def get_article_by_id(id: int, db: Session = Depends(get_db)):
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok = True)
 
+imageAnnexeRouter = APIRouter(prefix="/image/annexe", tags=['image annexe'])
+
+
+@imageAnnexeRouter.post("/", dependencies=[Depends(get_current_active_admin)])
+async def postImage(image: List[UploadFile] = File(...), article_id: int = Form(...), db: Session = Depends(get_db)):
+    
+    for file in image: 
+        img = imageAnnexeCreate(
+			article_id=article_id,
+			path=file.filename.replace(' ','')
+		)
+        db_image = imageAnnexe(**img.model_dump())
+        db.add(db_image)
+        db.commit()
+        db.refresh(db_image)
+        filepath = os.path.join(UPLOAD_DIR, file.filename.replace(' ', ''))
+        with open(filepath, "wb") as buffer: shutil.copyfileobj(file.file, buffer)
+     
+	
+    return {
+		"files":[ file.filename for file in image]
+	}
+    
+@imageAnnexeRouter.delete("/{id}", dependencies=[Depends(get_current_active_admin)])
+async def deleteImage(id: int, db: Session = Depends(get_db)):
+    db_image = db.query(imageAnnexe).filter(imageAnnexe.id == id).first()
+    if not db_image:
+       raise HTTPException(status_code=404, detail="article not found")
+    
+    db.delete(db_image)
+    db.commit()
+    return {"message": "article deleted successfully"}
+    
+@imageAnnexeRouter.get("/article/{id}")
+async def getAllImageAnnexe(id: int, db: Session = Depends(get_db)):
+    img =  db.query(imageAnnexe).filter(imageAnnexe.article_id == id)
+    res = []
+    for i in img:
+        res.append(i)
+    return res
+
 @article_router.post('/', dependencies=[Depends(get_current_active_admin)])
 async def postarticle(
     image: UploadFile = File(...),  
@@ -83,24 +131,27 @@ async def postarticle(
     excerpt: str = Form(...),
     author_id: int = Form(...),
     date: datetime = Form(...),
+    star: int = Form(...),
     db: Session = Depends(get_db)):
     filepath = os.path.join(UPLOAD_DIR, image.filename)
+    print(category[0])
+    category = str(category)
+    category = category.split(",")
     art = article_create(
 		image=image.filename,
 		category=category,
 		title= title,
 		excerpt=excerpt,
 		datePublication= str(date),
-		author_id=author_id
+		author_id=author_id,
+		star=star
 	)
     db_article = article(**art.model_dump())
     db.add(db_article)
     db.commit()
     db.refresh(db_article)
     
-    
     with open(filepath, "wb") as buffer: shutil.copyfileobj(image.file, buffer)
-	
 	
     return {
 		"image": image.filename,
@@ -108,7 +159,8 @@ async def postarticle(
 		"title": title,
 		"excerpt": excerpt,
 		"author_id": author_id,
-		"date": date
+		"date": date,
+		"star": star
 	}
      
 @article_router.put("/{id}", dependencies=[Depends(get_current_active_admin)])

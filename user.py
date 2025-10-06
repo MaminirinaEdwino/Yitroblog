@@ -25,7 +25,7 @@ class User(BaseModel):
     email: str
     full_name: Optional[str] = None
     is_active: bool = True
-    role: str = "user"  # Default role is 'user'
+    role: str   # Default role is 'user'
 
 class UserCreate(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -33,7 +33,7 @@ class UserCreate(BaseModel):
     password: str
     email: str
     full_name: Optional[str] = None
-    role: str = "user"  # Default role is 'user'
+    role: str   # Default role is 'user'
 
 class Token(BaseModel):
     access_token: str

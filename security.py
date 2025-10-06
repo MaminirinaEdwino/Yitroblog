@@ -45,6 +45,7 @@ async def create_user_db(db: SessionLocal, user: "UserCreate"):
         email=user.email,
         full_name=user.full_name,
         hashed_password=hashed_password,
+        role=user.role
     )
     db.add(db_user)
     db.commit()

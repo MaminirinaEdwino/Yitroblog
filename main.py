@@ -8,7 +8,7 @@ from fastapi.security import  OAuth2PasswordRequestForm
 from datetime import timedelta
 from user import UserDB, UserCreate, User, Token
 from security import *
-from article.route import article_router
+from article.route import article_router, imageAnnexeRouter
 from fastapi.staticfiles import StaticFiles
 from mail.route import emailRouter
 
@@ -46,15 +46,9 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def read_users_me(current_user: UserDB = Depends(get_current_active_user)):
     return current_user
 
-@app.get("/protected/")
-async def protected_route():
-    return {"message": "This route is protected!"}
-
-@app.get("/public/")
-async def public_route():
-    return {"message": "This route is public."}
 	
 app.include_router(article_router, tags=['article'])
 app.include_router(emailRouter)
+app.include_router(imageAnnexeRouter)
 if __name__ == '__main__':
 	uvicorn.run('main:app', host='0.0.0.0', port=8000, reload=True)
