@@ -40,10 +40,29 @@ async def get_all_article(db: Session = Depends(get_db)):
 
 @article_router.get("/{id}")
 async def get_article_by_id(id: int, db: Session = Depends(get_db)):
-	db_article = db.query(article).filter(article.id == id).first()
-	if not db_article:
-		raise HTTPException(status_code=404, detail="article not found")
-	return db_article
+    query = select(article).filter(article.id == id)
+    query = query.options(joinedload(article.author))
+    # db_article = db.query(article).filter(article.id == id).first()
+    db_article = db.execute(query)
+    
+    if not db_article:
+        raise HTTPException(status_code=404, detail="article not found")
+    # db_article.scalars().all()[0]
+    art = db_article.scalars().all()[0]
+    return {
+          		"id": art.id,
+				"image": art.image,
+				"title":  art.title,
+				"datePublication": art.datePublication,
+				"category": art.category,
+				"excerpt": art.excerpt,
+				"author": {
+				"id": art.author.id,
+				"username":art.author.username,
+				"full_name": art.author.full_name,
+				"email":art.author.email
+				}
+			}
 
 # @article_router.post("/")
 # async def create_article(article_post: article_create, db: Session = Depends(get_db)):
